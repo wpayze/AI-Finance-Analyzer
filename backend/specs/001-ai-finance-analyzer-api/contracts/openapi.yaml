@@ -1,0 +1,189 @@
+openapi: 3.0.3
+info:
+  title: AI Finance Analyzer API
+  description: An API for uploading financial transaction files and retrieving AI-powered analysis.
+  version: 1.0.0
+
+paths:
+  /upload:
+    post:
+      summary: Upload a transaction file
+      description: Accepts a CSV or Excel file for asynchronous analysis.
+      operationId: upload_file
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The CSV or Excel file containing transactions.
+      responses:
+        '202':
+          description: File accepted for processing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisJob'
+        '415':
+          description: Unsupported Media Type.
+
+  /analysis/{job_id}/status:
+    get:
+      summary: Get analysis status
+      description: Poll this endpoint to check the status of an analysis job.
+      operationId: get_analysis_status
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The current status of the job.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisJob'
+        '404':
+          description: Job not found.
+
+  /analysis/{job_id}/transactions:
+    get:
+      summary: Get categorized transactions
+      description: Retrieve the full list of transactions with their assigned categories for a completed job.
+      operationId: get_transactions
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: A list of categorized transactions.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Transaction'
+        '404':
+          description: Job not found or not yet completed.
+
+  /analysis/{job_id}/insights:
+    get:
+      summary: Get financial insights
+      description: Retrieve AI-generated insights, such as spending patterns and anomalies.
+      operationId: get_insights
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: A list of insights.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Insight'
+        '404':
+          description: Job not found or not yet completed.
+
+  /analysis/{job_id}/predictions:
+    get:
+      summary: Get spending predictions
+      description: Retrieve future spending predictions based on the analysis.
+      operationId: get_predictions
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: A list of predictions.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Prediction'
+        '404':
+          description: Job not found or not yet completed.
+
+components:
+  schemas:
+    AnalysisJob:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [PENDING, IN_PROGRESS, COMPLETED, FAILED]
+        error_message:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        description:
+          type: string
+        amount:
+          type: number
+          format: float
+        currency:
+          type: string
+        category:
+          type: string
+
+    Insight:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [SPENDING_PATTERN, ANOMALY_DETECTED]
+        title:
+          type: string
+        description:
+          type: string
+        data:
+          type: object
+
+    Prediction:
+      type: object
+      properties:
+        period:
+          type: string
+          example: "2025-12"
+        predicted_amount:
+          type: number
+          format: float
+        confidence_score:
+          type: number
+          format: float
